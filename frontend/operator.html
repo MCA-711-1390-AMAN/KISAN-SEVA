@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kisan Seva — CSC Operator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    @media print {
+      .no-print { display: none !important; }
+      .print-only { display: block !important; }
+      body { background: white; }
+    }
+    .print-only { display: none; }
+    .farmer-tab { transition: all 0.15s; }
+    .farmer-tab.active { background: #7C3AED; color: white; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm no-print">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <a href="/" class="text-gray-400 hover:text-gray-600 text-sm">← Back</a>
+        <div class="w-px h-5 bg-gray-200"></div>
+        <div class="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center text-white">🧑‍💼</div>
+        <div>
+          <h1 class="text-sm font-semibold text-gray-900">CSC Operator Interface</h1>
+          <p class="text-xs text-gray-400">Common Service Centre — Farmer Assistance</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-xs text-gray-500">Session: <strong id="session-count">0</strong> farmers</span>
+        <button onclick="newFarmer()"
+          class="bg-purple-600 hover:bg-purple-700 text-white text-xs
+          font-medium px-3 py-1.5 rounded-lg transition">
+          + New Farmer
+        </button>
+        <button onclick="printReport()"
+          class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs
+          font-medium px-3 py-1.5 rounded-lg transition no-print">
+          🖨️ Print Report
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+    <!-- LEFT — Farmer Tabs + Form -->
+    <div class="lg:col-span-1 no-print">
+
+      <!-- Farmer session tabs -->
+      <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm mb-4">
+        <p class="text-xs font-medium text-gray-500 mb-3">Today's Farmers</p>
+        <div id="farmer-tabs" class="space-y-1.5"></div>
+        <button onclick="newFarmer()"
+          class="mt-3 w-full border border-dashed border-purple-300 text-purple-600
+          text-xs py-2 rounded-xl hover:bg-purple-50 transition">
+          + Add Farmer
+        </button>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
+        <p class="text-xs font-medium text-gray-500 mb-3">Session Summary</p>
+        <div class="space-y-2">
+          <div class="flex justify-between text-xs">
+            <span class="text-gray-500">Farmers helped</span>
+            <span class="font-medium text-gray-700" id="summary-total">0</span>
+          </div>
+          <div class="flex justify-between text-xs">
+            <span class="text-gray-500">Avg eligible schemes</span>
+            <span class="font-medium text-green-600" id="summary-avg">—</span>
+          </div>
+          <div class="flex justify-between text-xs">
+            <span class="text-gray-500">Reports printed</span>
+            <span class="font-medium text-gray-700" id="summary-prints">0</span>
+          </div>
+          <div class="flex justify-between text-xs">
+            <span class="text-gray-500">Most common scheme</span>
+            <span class="font-medium text-purple-600" id="summary-top">PM-KISAN</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MIDDLE — Active Farmer Form + Results -->
+    <div class="lg:col-span-2 flex flex-col gap-5">
+
+      <!-- Active farmer form -->
+      <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-sm font-semibold text-gray-800">
+            👨‍🌾 <span id="active-farmer-name">Farmer Profile</span>
+          </h2>
+          <span id="active-farmer-badge"
+            class="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-600">
+            Active
+          </span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-gray-500 block mb-1">Farmer Name</label>
+            <input id="f-name" type="text" placeholder="e.g. Ramesh Kumar"
+              class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2
+              focus:outline-none focus:ring-2 focus:ring-purple-400"/>
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 block mb-1">State</label>
+            <select id="f-state" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400">
+              <option>Bihar</option><option>Uttar Pradesh</option>
+              <option>Madhya Pradesh</option><option>Rajasthan</option>
+              <option>Maharashtra</option><option>Punjab</option>
+              <option>Haryana</option><option>Gujarat</option>
+              <option>West Bengal</option><option>Odisha</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 block mb-1">Land (acres)</label>
+            <input id="f-land" type="number" value="2" step="0.5" min="0"
+              class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2
+              focus:outline-none focus:ring-2 focus:ring-purple-400"/>
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 block mb-1">Category</label>
+            <select id="f-category" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400">
+              <option>General</option><option>OBC</option>
+              <option>SC</option><option>ST</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 block mb-1">Annual Income (₹)</label>
+            <input id="f-income" type="number" value="75000"
+              class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2
+              focus:outline-none focus:ring-2 focus:ring-purple-400"/>
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 block mb-1">Main Crop</label>
+            <select id="f-crop" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400">
+              <option value="wheat">Wheat</option>
+              <option value="rice">Rice</option>
+              <option value="cotton">Cotton</option>
+              <option value="sugarcane">Sugarcane</option>
+              <option value="maize">Maize</option>
+              <option value="pulses">Pulses</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-4 col-span-2 pt-1">
+            <label class="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+              <input id="f-aadhaar" type="checkbox" checked class="accent-purple-600 w-4 h-4"/>
+              Has Aadhaar Card
+            </label>
+            <label class="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+              <input id="f-bank" type="checkbox" checked class="accent-purple-600 w-4 h-4"/>
+              Has Bank Account
+            </label>
+          </div>
+        </div>
+
+        <div class="flex gap-2 mt-4">
+          <button onclick="checkFarmer()"
+            class="flex-1 bg-purple-600 hover:bg-purple-700 text-white
+            text-sm font-medium py-2.5 rounded-xl transition">
+            🔍 Check Eligibility
+          </button>
+          <button onclick="downloadFarmerChecklist()"
+            class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs
+            font-medium px-4 py-2.5 rounded-xl transition">
+            📥 Download
+          </button>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div id="results-section" class="hidden flex flex-col gap-4">
+
+        <!-- Summary banner -->
+        <div id="results-banner"
+          class="bg-purple-50 border border-purple-200 rounded-2xl px-5 py-4
+          flex items-center justify-between">
+          <div>
+            <p class="text-sm font-semibold text-purple-800" id="results-summary"></p>
+            <p class="text-xs text-purple-500 mt-0.5" id="results-benefit"></p>
+          </div>
+          <div class="text-3xl font-bold text-purple-700" id="results-count"></div>
+        </div>
+
+        <!-- Scheme results -->
+        <div id="results-cards" class="space-y-3"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT — AI Assistant + Comparison -->
+    <div class="lg:col-span-1 flex flex-col gap-5 no-print">
+
+      <!-- AI Quick Ask -->
+      <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="bg-purple-600 px-4 py-3 flex items-center gap-2">
+          <span class="text-lg">🤖</span>
+          <div>
+            <p class="text-sm font-semibold text-white">AI Assistant</p>
+            <p class="text-xs text-purple-200">Ask about any scheme</p>
+          </div>
+        </div>
+        <div id="op-chat" class="h-52 overflow-y-auto p-3 flex flex-col gap-2">
+          <div class="bg-purple-50 text-purple-900 text-xs rounded-xl p-2.5">
+            Namaste! Kisi bhi scheme ke baare mein poochhen. Main documents, eligibility aur application process bataunga.
+          </div>
+        </div>
+        <div class="p-2 border-t border-gray-100 flex gap-2">
+          <input id="op-input" type="text" placeholder="Ask about any scheme..."
+            class="flex-1 text-xs border border-gray-200 rounded-lg px-2.5 py-1.5
+            focus:outline-none focus:ring-2 focus:ring-purple-400"
+            onkeydown="if(event.key==='Enter') opAsk()"/>
+          <button onclick="opAsk()"
+            class="bg-purple-600 text-white px-2.5 py-1.5 rounded-lg text-xs">➤</button>
+        </div>
+        <div class="px-2 pb-2 flex flex-wrap gap-1">
+          <button onclick="opQuick('PM-KISAN eligibility kya hai?')"
+            class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded-full">PM-KISAN</button>
+          <button onclick="opQuick('PMFBY claim kaise karein?')"
+            class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded-full">PMFBY claim</button>
+          <button onclick="opQuick('KCC ke liye kya documents chahiye?')"
+            class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded-full">KCC docs</button>
+        </div>
+      </div>
+
+      <!-- Farmer History -->
+      <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
+        <p class="text-xs font-medium text-gray-500 mb-3">📋 Today's Session Log</p>
+        <div id="session-log" class="space-y-2 max-h-60 overflow-y-auto">
+          <p class="text-xs text-gray-400 text-center py-4">No farmers checked yet</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Print Report Section -->
+  <div class="print-only p-8" id="print-section">
+    <div class="text-center border-b-2 border-gray-800 pb-4 mb-6">
+      <h1 class="text-2xl font-bold">🌾 KISAN SEVA — ELIGIBILITY REPORT</h1>
+      <p class="text-sm text-gray-600">Common Service Centre • Government Scheme Finder</p>
+      <p class="text-xs text-gray-500 mt-1">Date: <span id="print-date"></span></p>
+    </div>
+    <div id="print-content"></div>
+    <div class="mt-8 border-t border-gray-300 pt-4 text-xs text-gray-500 text-center">
+      Generated by Kisan Seva AI • Visit your nearest CSC centre with these documents
+    </div>
+  </div>
+
+  <script>
+    const API = 'http://localhost:8000';
+    let farmers = [];
+    let activeFarmerIdx = 0;
+    let printCount = 0;
+
+    function newFarmer() {
+      const idx = farmers.length;
+      farmers.push({ name: `Farmer ${idx + 1}`, results: null, eligible: 0 });
+      activeFarmerIdx = idx;
+      renderTabs();
+      clearForm();
+      document.getElementById('f-name').focus();
+      document.getElementById('results-section').classList.add('hidden');
+      updateSessionCount();
+    }
+
+    function switchFarmer(idx) {
+      activeFarmerIdx = idx;
+      renderTabs();
+      const f = farmers[idx];
+      if (f.results) {
+        renderResults(f.results, f.name);
+        document.getElementById('results-section').classList.remove('hidden');
+      } else {
+        document.getElementById('results-section').classList.add('hidden');
+      }
+      document.getElementById('active-farmer-name').textContent = f.name || 'Farmer Profile';
+    }
+
+    function renderTabs() {
+      const el = document.getElementById('farmer-tabs');
+      el.innerHTML = farmers.map((f, i) => `
+        <button onclick="switchFarmer(${i})"
+          class="farmer-tab w-full text-left px-3 py-2 rounded-xl text-xs font-medium border
+          ${i === activeFarmerIdx ? 'active border-purple-600' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}">
+          <div class="flex items-center justify-between">
+            <span>${f.name}</span>
+            ${f.results ? `<span class="${i===activeFarmerIdx?'text-purple-200':'text-green-500'}">${f.eligible} ✓</span>` : ''}
+          </div>
+        </button>`).join('');
+    }
+
+    function clearForm() {
+      document.getElementById('f-name').value = '';
+      document.getElementById('active-farmer-name').textContent = 'Farmer Profile';
+    }
+
+    function updateSessionCount() {
+      document.getElementById('session-count').textContent = farmers.length;
+      document.getElementById('summary-total').textContent = farmers.length;
+      const withResults = farmers.filter(f => f.results);
+      if (withResults.length > 0) {
+        const avg = (withResults.reduce((s, f) => s + f.eligible, 0) / withResults.length).toFixed(1);
+        document.getElementById('summary-avg').textContent = avg;
+      }
+    }
+
+    function getProfile() {
+      return {
+        state:            document.getElementById('f-state').value,
+        land_acres:       parseFloat(document.getElementById('f-land').value) || 2,
+        category:         document.getElementById('f-category').value,
+        annual_income:    parseFloat(document.getElementById('f-income').value) || 75000,
+        crop_type:        document.getElementById('f-crop').value,
+        has_aadhaar:      document.getElementById('f-aadhaar').checked,
+        has_bank_account: document.getElementById('f-bank').checked,
+      };
+    }
+
+    async function checkFarmer() {
+      const name = document.getElementById('f-name').value.trim() || `Farmer ${activeFarmerIdx + 1}`;
+      if (activeFarmerIdx >= farmers.length) newFarmer();
+      farmers[activeFarmerIdx].name = name;
+      document.getElementById('active-farmer-name').textContent = name;
+
+      const btn = document.querySelector('button[onclick="checkFarmer()"]');
+      btn.textContent = '⏳ Checking...'; btn.disabled = true;
+
+      try {
+        const res  = await fetch(`${API}/api/eligibility`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(getProfile())
+        });
+        const data = await res.json();
+        farmers[activeFarmerIdx].results  = data;
+        farmers[activeFarmerIdx].eligible = data.eligible_count;
+        renderResults(data, name);
+        document.getElementById('results-section').classList.remove('hidden');
+        renderTabs();
+        updateSessionCount();
+        addSessionLog(name, data.eligible_count, data.total_schemes);
+      } catch { alert('Server se connect nahi ho paya.'); }
+
+      btn.textContent = '🔍 Check Eligibility'; btn.disabled = false;
+    }
+
+    function renderResults(data, farmerName) {
+      document.getElementById('results-count').textContent = data.eligible_count;
+      document.getElementById('results-summary').textContent =
+        `${farmerName} — ${data.eligible_count} out of ${data.total_schemes} schemes ke liye eligible`;
+
+      const totalBenefit = data.schemes
+        .filter(s => s.eligible)
+        .reduce((sum, s) => {
+          const map = { pm_kisan: 6000, pmfby_kharif: 4000, pmfby_rabi: 3500, kcc: 15000, smam: 25000, soil_health: 500, enam: 5000, pmkmy: 36000 };
+          return sum + (map[s.id] || 2000);
+        }, 0);
+      document.getElementById('results-benefit').textContent =
+        `Estimated yearly benefit: ₹${totalBenefit.toLocaleString('en-IN')}`;
+
+      const el = document.getElementById('results-cards');
+      el.innerHTML = data.schemes.filter(s => s.eligible).map(s => `
+        <div class="bg-white border border-purple-200 border-l-4 rounded-xl p-4">
+          <div class="flex items-start justify-between mb-2">
+            <div>
+              <h3 class="text-sm font-semibold text-gray-800">${s.name}</h3>
+              <p class="text-xs text-gray-400">${s.ministry}</p>
+            </div>
+            <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">✓ Eligible</span>
+          </div>
+          <p class="text-xs text-gray-600 mb-2">${s.benefit}</p>
+          <div class="bg-gray-50 rounded-lg p-2.5 mb-2">
+            <p class="text-xs font-medium text-gray-600 mb-1">Documents:</p>
+            <div class="grid grid-cols-2 gap-1">
+              ${s.documents.map(d => `<div class="text-xs text-gray-500">☐ ${d}</div>`).join('')}
+            </div>
+          </div>
+          <p class="text-xs text-purple-600 font-medium">📍 ${s.apply_at}</p>
+        </div>`).join('');
+    }
+
+    function addSessionLog(name, eligible, total) {
+      const el = document.getElementById('session-log');
+      const time = new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+      const entry = document.createElement('div');
+      entry.className = 'flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0';
+      entry.innerHTML = `
+        <div>
+          <p class="text-xs font-medium text-gray-700">${name}</p>
+          <p class="text-xs text-gray-400">${time}</p>
+        </div>
+        <span class="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full">${eligible}/${total}</span>`;
+      const placeholder = el.querySelector('p');
+      if (placeholder) placeholder.remove();
+      el.prepend(entry);
+    }
+
+    async function downloadFarmerChecklist() {
+      try {
+        const res  = await fetch(`${API}/api/download-checklist`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(getProfile())
+        });
+        const blob = await res.blob();
+        const url  = window.URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url;
+        a.download = `${document.getElementById('f-name').value || 'farmer'}_checklist.txt`;
+        a.click();
+      } catch { alert('Download failed.'); }
+    }
+
+    function printReport() {
+      const content = document.getElementById('print-content');
+      document.getElementById('print-date').textContent = new Date().toLocaleDateString('en-IN');
+      content.innerHTML = farmers.filter(f => f.results).map(f => `
+        <div style="margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid #ccc">
+          <h2 style="font-size:16px;font-weight:bold;margin-bottom:8px">👨‍🌾 ${f.name}</h2>
+          <p style="font-size:12px;color:#555">Eligible for ${f.eligible} schemes</p>
+          ${f.results.schemes.filter(s => s.eligible).map(s => `
+            <div style="margin:10px 0;padding:10px;background:#f9f9f9;border-left:3px solid #7C3AED">
+              <strong style="font-size:13px">${s.name}</strong> — ${s.benefit}<br/>
+              <span style="font-size:11px;color:#666">Documents: ${s.documents.join(', ')}</span><br/>
+              <span style="font-size:11px;color:#7C3AED">Apply at: ${s.apply_at}</span>
+            </div>`).join('')}
+        </div>`).join('');
+      printCount++;
+      document.getElementById('summary-prints').textContent = printCount;
+      window.print();
+    }
+
+    // AI Chat
+    function addOpMsg(text, isUser) {
+      const el = document.getElementById('op-chat');
+      const div = document.createElement('div');
+      div.className = `text-xs rounded-xl p-2.5 ${isUser ? 'bg-purple-600 text-white ml-4' : 'bg-purple-50 text-purple-900 mr-4'}`;
+      div.textContent = text;
+      el.appendChild(div);
+      el.scrollTop = el.scrollHeight;
+    }
+
+    async function opAsk() {
+      const input = document.getElementById('op-input');
+      const q = input.value.trim();
+      if (!q) return;
+      addOpMsg(q, true);
+      input.value = '';
+      addOpMsg('Soch raha hai...', false);
+      try {
+        const res  = await fetch(`${API}/api/chat`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: q })
+        });
+        const data = await res.json();
+        const el = document.getElementById('op-chat');
+        el.lastChild.remove();
+        addOpMsg(data.answer || data.detail, false);
+      } catch {
+        document.getElementById('op-chat').lastChild.remove();
+        addOpMsg('Server se connect nahi ho paya.', false);
+      }
+    }
+
+    function opQuick(q) {
+      document.getElementById('op-input').value = q;
+      opAsk();
+    }
+
+    // Init — add first farmer slot
+    newFarmer();
+  </script>
+</body>
+</html>

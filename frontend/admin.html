@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kisan Seva — Admin Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .pulse { animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+    .stat-card { transition: transform 0.2s; }
+    .stat-card:hover { transform: translateY(-2px); }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <a href="/" class="text-gray-400 hover:text-gray-600 text-sm">← Back</a>
+        <div class="w-px h-5 bg-gray-200"></div>
+        <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white text-sm">⚙️</div>
+        <div>
+          <h1 class="text-sm font-semibold text-gray-900">Admin Dashboard</h1>
+          <p class="text-xs text-gray-400">Kisan Seva — System Management</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="last-updated" class="text-xs text-gray-400"></span>
+        <div class="flex items-center gap-1.5">
+          <span id="sys-dot" class="w-2 h-2 bg-gray-300 rounded-full"></span>
+          <span id="sys-txt" class="text-xs text-gray-500">Checking...</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-6">
+
+    <!-- Top stat cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="stat-card bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
+        <p class="text-xs text-gray-400 mb-1">Total Chunks</p>
+        <p class="text-2xl font-bold text-blue-600" id="stat-chunks">—</p>
+        <p class="text-xs text-gray-400 mt-1">in FAISS index</p>
+      </div>
+      <div class="stat-card bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
+        <p class="text-xs text-gray-400 mb-1">Data Sources</p>
+        <p class="text-2xl font-bold text-green-600" id="stat-sources">—</p>
+        <p class="text-xs text-gray-400 mt-1">active pipelines</p>
+      </div>
+      <div class="stat-card bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
+        <p class="text-xs text-gray-400 mb-1">Total Schemes</p>
+        <p class="text-2xl font-bold text-purple-600" id="stat-schemes">—</p>
+        <p class="text-xs text-gray-400 mt-1">in eligibility engine</p>
+      </div>
+      <div class="stat-card bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
+        <p class="text-xs text-gray-400 mb-1">RAG Status</p>
+        <p class="text-2xl font-bold text-green-600" id="stat-rag">—</p>
+        <p class="text-xs text-gray-400 mt-1">chain loaded</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- LEFT — Knowledge Base + Refresh -->
+      <div class="lg:col-span-2 flex flex-col gap-5">
+
+        <!-- Knowledge Base Card -->
+        <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-sm font-semibold text-gray-800">📚 Knowledge Base</h2>
+            <span id="kb-state-badge" class="text-xs px-2.5 py-1 rounded-full bg-gray-100 text-gray-500">
+              idle
+            </span>
+          </div>
+
+          <!-- Source breakdown bars -->
+          <div id="source-bars" class="space-y-3 mb-5">
+            <div class="text-xs text-gray-400 text-center py-4">Loading source data...</div>
+          </div>
+
+          <!-- Refresh controls -->
+          <div class="border-t border-gray-100 pt-4">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <p class="text-sm font-medium text-gray-700">Refresh Knowledge Base</p>
+                <p class="text-xs text-gray-400 mt-0.5">
+                  Fetches from data.gov.in + live scraping + myScheme dataset
+                </p>
+              </div>
+              <button onclick="triggerRefresh()" id="refresh-btn"
+                class="flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-xs
+                font-medium px-4 py-2 rounded-xl transition flex items-center gap-2">
+                🔄 Refresh Now
+              </button>
+            </div>
+
+            <!-- Progress bar -->
+            <div id="refresh-progress" class="hidden">
+              <div class="flex items-center justify-between text-xs text-gray-500 mb-1">
+                <span id="progress-label">Fetching live data...</span>
+                <span id="progress-time">0s</span>
+              </div>
+              <div class="w-full bg-gray-100 rounded-full h-2">
+                <div id="progress-bar" class="bg-blue-500 h-2 rounded-full transition-all duration-1000"
+                  style="width:0%"></div>
+              </div>
+            </div>
+
+            <div id="refresh-result" class="hidden mt-3 p-3 rounded-xl text-xs"></div>
+          </div>
+        </div>
+
+        <!-- Scheme Management -->
+        <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+          <h2 class="text-sm font-semibold text-gray-800 mb-4">📋 Scheme Management</h2>
+          <div id="scheme-list" class="space-y-2">
+            <div class="text-xs text-gray-400 text-center py-4">Loading schemes...</div>
+          </div>
+        </div>
+
+        <!-- API Endpoints -->
+        <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+          <h2 class="text-sm font-semibold text-gray-800 mb-4">🔌 API Endpoints</h2>
+          <div class="space-y-2" id="endpoint-list"></div>
+          <a href="/docs" target="_blank"
+            class="mt-3 flex items-center gap-2 text-xs text-blue-600 hover:underline">
+            📋 Open full FastAPI documentation →
+          </a>
+        </div>
+
+      </div>
+
+      <!-- RIGHT — System Health + Scheduler -->
+      <div class="flex flex-col gap-5">
+
+        <!-- System Health -->
+        <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+          <h2 class="text-sm font-semibold text-gray-800 mb-4">💻 System Health</h2>
+          <div class="space-y-3" id="health-items"></div>
+        </div>
+
+        <!-- Scheduler Info -->
+        <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+          <h2 class="text-sm font-semibold text-gray-800 mb-3">🕐 Auto-Refresh Scheduler</h2>
+          <div class="bg-blue-50 rounded-xl p-3 mb-3">
+            <p class="text-xs font-medium text-blue-700">Every Sunday at 2:00 AM</p>
+            <p class="text-xs text-blue-500 mt-0.5">APScheduler — runs inside FastAPI process</p>
+          </div>
+          <div class="space-y-2 text-xs text-gray-500">
+            <div class="flex justify-between">
+              <span>Schedule</span>
+              <span class="font-medium text-gray-700">Weekly (cron)</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Next run</span>
+              <span class="font-medium text-gray-700" id="next-run">—</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Last success</span>
+              <span class="font-medium text-gray-700" id="last-success">—</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Trigger</span>
+              <span class="font-medium text-gray-700" id="last-trigger">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+          <h2 class="text-sm font-semibold text-gray-800 mb-3">⚡ Quick Actions</h2>
+          <div class="space-y-2">
+            <a href="/farmer" target="_blank"
+              class="flex items-center gap-2 w-full bg-green-50 hover:bg-green-100
+              text-green-700 text-xs font-medium px-3 py-2.5 rounded-xl transition">
+              👨‍🌾 Open Farmer Interface
+            </a>
+            <a href="/operator" target="_blank"
+              class="flex items-center gap-2 w-full bg-purple-50 hover:bg-purple-100
+              text-purple-700 text-xs font-medium px-3 py-2.5 rounded-xl transition">
+              🧑‍💼 Open CSC Operator
+            </a>
+            <a href="/docs" target="_blank"
+              class="flex items-center gap-2 w-full bg-blue-50 hover:bg-blue-100
+              text-blue-700 text-xs font-medium px-3 py-2.5 rounded-xl transition">
+              📋 API Documentation
+            </a>
+            <button onclick="testChat()"
+              class="flex items-center gap-2 w-full bg-gray-50 hover:bg-gray-100
+              text-gray-700 text-xs font-medium px-3 py-2.5 rounded-xl transition text-left">
+              🧪 Test AI Response
+            </button>
+          </div>
+          <div id="test-result" class="hidden mt-3 bg-gray-50 rounded-xl p-3 text-xs text-gray-600"></div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const API = 'http://localhost:8000';
+    let refreshTimer = null;
+    let progressInterval = null;
+
+    const ENDPOINTS = [
+      { method: 'GET',  path: '/health',              desc: 'Server + RAG status' },
+      { method: 'POST', path: '/api/eligibility',     desc: 'Farmer eligibility check' },
+      { method: 'POST', path: '/api/chat',            desc: 'RAG AI chat' },
+      { method: 'GET',  path: '/api/schemes',         desc: 'List all schemes' },
+      { method: 'POST', path: '/api/download-checklist', desc: 'Download documents checklist' },
+      { method: 'POST', path: '/api/refresh-data',    desc: 'Trigger KB rebuild' },
+      { method: 'GET',  path: '/api/refresh-status',  desc: 'Refresh pipeline status' },
+    ];
+
+    const methodColor = { GET: 'bg-green-100 text-green-700', POST: 'bg-blue-100 text-blue-700' };
+
+    function renderEndpoints() {
+      const el = document.getElementById('endpoint-list');
+      el.innerHTML = ENDPOINTS.map(e => `
+        <div class="flex items-center gap-2">
+          <span class="text-xs px-2 py-0.5 rounded font-mono font-medium ${methodColor[e.method]}">${e.method}</span>
+          <span class="text-xs font-mono text-gray-600">${e.path}</span>
+          <span class="text-xs text-gray-400 ml-auto">${e.desc}</span>
+        </div>`).join('');
+    }
+
+    async function loadHealth() {
+      try {
+        const res  = await fetch(`${API}/health`);
+        const data = await res.json();
+        const dot  = document.getElementById('sys-dot');
+        const txt  = document.getElementById('sys-txt');
+        dot.className = `w-2 h-2 rounded-full ${data.rag_ready ? 'bg-green-500' : 'bg-yellow-400'}`;
+        txt.textContent = data.rag_ready ? 'All systems operational' : 'RAG loading...';
+        document.getElementById('stat-rag').textContent = data.rag_ready ? '✅' : '⏳';
+
+        const hi = document.getElementById('health-items');
+        hi.innerHTML = [
+          { label: 'FastAPI Server',   ok: true,           note: 'Running on :8000' },
+          { label: 'RAG Chain',        ok: data.rag_ready, note: data.rag_ready ? 'Groq + FAISS loaded' : 'Loading...' },
+          { label: 'Groq LLM',        ok: data.rag_ready, note: 'llama-3.1-8b-instant' },
+          { label: 'FAISS Index',     ok: data.rag_ready, note: 'vectorstore/faiss_index' },
+          { label: 'Embedding Model', ok: data.rag_ready, note: 'all-MiniLM-L6-v2 (MPS)' },
+        ].map(item => `
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full ${item.ok ? 'bg-green-400' : 'bg-yellow-400'}"></span>
+              <span class="text-xs text-gray-700">${item.label}</span>
+            </div>
+            <span class="text-xs text-gray-400">${item.note}</span>
+          </div>`).join('');
+      } catch {
+        document.getElementById('sys-txt').textContent = 'Server offline';
+        document.getElementById('sys-dot').className = 'w-2 h-2 rounded-full bg-red-400';
+      }
+    }
+
+    async function loadRefreshStatus() {
+      try {
+        const res  = await fetch(`${API}/api/refresh-status`);
+        const data = await res.json();
+
+        document.getElementById('stat-chunks').textContent = data.total_chunks || '768';
+
+        const counts = data.doc_counts || {};
+        const sources = Object.keys(counts).length;
+        document.getElementById('stat-sources').textContent = sources || '4';
+
+        // Source breakdown bars
+        const bars = document.getElementById('source-bars');
+        const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
+        const colors = { pdf: '#16A34A', live_api: '#2563EB', live_scrape: '#EA580C', live_dataset: '#7C3AED' };
+        const labels = { pdf: '📄 PDF Files', live_api: '🌐 data.gov.in API', live_scrape: '🔍 Web Scraping', live_dataset: '🤗 myScheme Dataset' };
+
+        if (sources > 0) {
+          bars.innerHTML = Object.entries(counts).map(([type, count]) => `
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-gray-600">${labels[type] || type}</span>
+                <span class="text-gray-500">${count} docs (${Math.round(count/total*100)}%)</span>
+              </div>
+              <div class="w-full bg-gray-100 rounded-full h-3">
+                <div class="h-3 rounded-full" style="width:${Math.round(count/total*100)}%;background:${colors[type]||'#6B7280'}"></div>
+              </div>
+            </div>`).join('');
+        } else {
+          bars.innerHTML = `
+            <div class="grid grid-cols-2 gap-3">
+              ${[['📄 PDFs','117','#16A34A'],['🌐 data.gov.in','100','#2563EB'],['🔍 Web Scrape','2','#EA580C'],['🤗 myScheme','28','#7C3AED']].map(([l,c,col])=>`
+              <div>
+                <div class="flex justify-between text-xs mb-1"><span class="text-gray-600">${l}</span><span class="text-gray-500">${c} docs</span></div>
+                <div class="w-full bg-gray-100 rounded-full h-3"><div class="h-3 rounded-full" style="width:100%;background:${col}"></div></div>
+              </div>`).join('')}
+            </div>`;
+        }
+
+        // Scheduler info
+        const badge = document.getElementById('kb-state-badge');
+        const stateColors = { idle:'bg-gray-100 text-gray-500', running:'bg-blue-100 text-blue-600 pulse', success:'bg-green-100 text-green-600', failed:'bg-red-100 text-red-600' };
+        badge.className = `text-xs px-2.5 py-1 rounded-full ${stateColors[data.state] || stateColors.idle}`;
+        badge.textContent = data.state || 'idle';
+
+        if (data.last_success) {
+          const d = new Date(data.last_success);
+          const mins = Math.round((Date.now() - d) / 60000);
+          document.getElementById('last-success').textContent = mins < 60 ? `${mins}m ago` : d.toLocaleDateString();
+          document.getElementById('last-updated').textContent = `Last refresh: ${mins < 60 ? mins+'m ago' : d.toLocaleDateString()}`;
+        }
+
+        // Next Sunday 2AM
+        const now = new Date();
+        const nextSun = new Date(now);
+        nextSun.setDate(now.getDate() + (7 - now.getDay()) % 7 || 7);
+        nextSun.setHours(2, 0, 0, 0);
+        document.getElementById('next-run').textContent = nextSun.toLocaleDateString('en-IN', { weekday:'short', month:'short', day:'numeric' }) + ' 2:00 AM';
+
+        if (data.last_run_started) {
+          document.getElementById('last-trigger').textContent = data.triggered_by || 'manual_ui';
+        }
+
+      } catch(e) { console.warn('refresh status error', e); }
+    }
+
+    async function loadSchemes() {
+      try {
+        const res  = await fetch(`${API}/api/schemes`);
+        const data = await res.json();
+        document.getElementById('stat-schemes').textContent = data.total;
+
+        const el = document.getElementById('scheme-list');
+        const colors = ['green','blue','orange','purple','pink','teal','indigo','rose','cyan','amber','lime','violet'];
+        el.innerHTML = data.schemes.map((s, i) => `
+          <div class="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-${colors[i%colors.length]}-400"></span>
+              <div>
+                <span class="text-xs font-medium text-gray-700">${s.name}</span>
+                <span class="text-xs text-gray-400 ml-2">${s.full_name}</span>
+              </div>
+            </div>
+            <span class="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full flex-shrink-0 ml-2">Active</span>
+          </div>`).join('');
+      } catch {}
+    }
+
+    async function triggerRefresh() {
+      const btn = document.getElementById('refresh-btn');
+      const progress = document.getElementById('refresh-progress');
+      const result = document.getElementById('refresh-result');
+      const bar = document.getElementById('progress-bar');
+      const label = document.getElementById('progress-label');
+      const timeEl = document.getElementById('progress-time');
+
+      btn.textContent = '⏳ Refreshing...';
+      btn.disabled = true;
+      progress.classList.remove('hidden');
+      result.classList.add('hidden');
+      bar.style.width = '0%';
+
+      let secs = 0;
+      let pct = 0;
+      progressInterval = setInterval(() => {
+        secs++;
+        timeEl.textContent = secs + 's';
+        pct = Math.min(pct + (secs < 10 ? 8 : secs < 30 ? 3 : 1), 90);
+        bar.style.width = pct + '%';
+        const stages = ['Fetching from data.gov.in...', 'Scraping government sites...', 'Loading myScheme dataset...', 'Building FAISS index...', 'Swapping knowledge base...'];
+        label.textContent = stages[Math.min(Math.floor(secs/8), stages.length-1)];
+      }, 1000);
+
+      try {
+        await fetch(`${API}/api/refresh-data`, { method: 'POST' });
+
+        refreshTimer = setInterval(async () => {
+          const s = await (await fetch(`${API}/api/refresh-status`)).json();
+          if (s.state !== 'running') {
+            clearInterval(refreshTimer);
+            clearInterval(progressInterval);
+            bar.style.width = '100%';
+            timeEl.textContent = secs + 's';
+
+            result.classList.remove('hidden');
+            if (s.state === 'success') {
+              result.className = 'mt-3 p-3 rounded-xl text-xs bg-green-50 text-green-700';
+              result.innerHTML = `✅ Knowledge base refreshed! ${s.total_chunks} chunks from ${Object.keys(s.doc_counts||{}).length} sources.`;
+            } else {
+              result.className = 'mt-3 p-3 rounded-xl text-xs bg-red-50 text-red-600';
+              result.innerHTML = `❌ Refresh failed: ${s.error || 'Unknown error'}`;
+            }
+            btn.textContent = '🔄 Refresh Now';
+            btn.disabled = false;
+            loadRefreshStatus();
+          }
+        }, 3000);
+      } catch {
+        clearInterval(progressInterval);
+        result.classList.remove('hidden');
+        result.className = 'mt-3 p-3 rounded-xl text-xs bg-red-50 text-red-600';
+        result.innerHTML = '❌ Could not connect to server.';
+        btn.textContent = '🔄 Refresh Now';
+        btn.disabled = false;
+      }
+    }
+
+    async function testChat() {
+      const el = document.getElementById('test-result');
+      el.classList.remove('hidden');
+      el.textContent = '⏳ Testing AI response...';
+      try {
+        const res  = await fetch(`${API}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: 'PM-KISAN scheme kya hai?' })
+        });
+        const data = await res.json();
+        el.textContent = data.answer
+          ? `✅ AI Response: "${data.answer.slice(0, 120)}..."`
+          : `❌ ${data.detail}`;
+      } catch {
+        el.textContent = '❌ Chat API failed — check server logs';
+      }
+    }
+
+    renderEndpoints();
+    loadHealth();
+    loadRefreshStatus();
+    loadSchemes();
+    setInterval(() => { loadHealth(); loadRefreshStatus(); }, 30000);
+  </script>
+</body>
+</html>

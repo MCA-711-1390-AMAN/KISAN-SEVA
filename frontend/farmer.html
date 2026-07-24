@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kisan Seva — Government Scheme Finder</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .chat-messages { height: 320px; overflow-y: auto; }
+    .typing span {
+      display: inline-block; width: 7px; height: 7px;
+      background: #16a34a; border-radius: 50%; margin: 0 2px;
+      animation: bounce 1s infinite;
+    }
+    .typing span:nth-child(2) { animation-delay: 0.2s; }
+    .typing span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-5px); }
+    }
+    .scheme-card { transition: transform 0.2s, box-shadow 0.2s; }
+    .scheme-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .step-line { flex: 1; height: 2px; background: #e5e7eb; margin: 0 2px; }
+    .step-line.done { background: #16a34a; }
+    .step-circle {
+      width: 22px; height: 22px; border-radius: 50%; display: flex;
+      align-items: center; justify-content: center; font-size: 10px;
+      font-weight: 600; flex-shrink: 0; cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .step-circle:hover { transform: scale(1.15); }
+    .step-circle.done { background: #16a34a; color: white; }
+    .step-circle.active { background: #dcfce7; color: #15803d; border: 2px solid #16a34a; }
+    .step-circle.pending { background: #f3f4f6; color: #9ca3af; border: 2px solid #e5e7eb; }
+    .stepper-tooltip {
+      position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%);
+      background: #1f2937; color: white; font-size: 10px; padding: 4px 8px;
+      border-radius: 6px; white-space: nowrap; pointer-events: none;
+      opacity: 0; transition: opacity 0.15s; z-index: 10;
+    }
+    .step-wrap:hover .stepper-tooltip { opacity: 1; }
+    .step-wrap { position: relative; display: flex; flex-direction: column; align-items: center; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+
+        <!-- Back to Home -->
+        <a href="/"
+          class="flex items-center gap-1.5 text-xs text-gray-500 hover:text-green-600
+          bg-gray-100 hover:bg-green-50 px-3 py-1.5 rounded-lg transition">
+          ← Home
+        </a>
+
+        <div class="w-px h-5 bg-gray-200"></div>
+
+        <div class="w-9 h-9 bg-green-600 rounded-xl flex items-center justify-center text-white text-lg">🌾</div>
+        <div>
+          <h1 class="text-base font-semibold text-gray-900">Kisan Seva</h1>
+          <p class="text-xs text-gray-500">Government Scheme Finder for Farmers</p>
+        </div>
+      </div>
+
+      <!-- AI Status -->
+      <div class="flex items-center gap-2">
+        <span id="status-dot" class="w-2 h-2 bg-gray-300 rounded-full"></span>
+        <span id="status-text" class="text-xs text-gray-500">Checking...</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- LEFT COLUMN -->
+    <div class="lg:col-span-2 flex flex-col gap-6">
+
+      <!-- Farmer Profile Form -->
+      <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+        <h2 class="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+          <span class="text-lg">👨‍🌾</span> Your Farmer Profile
+        </h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <div>
+            <label class="text-xs text-gray-500 block mb-1">State</label>
+            <select id="state" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500">
+              <option>Bihar</option><option>Uttar Pradesh</option>
+              <option>Madhya Pradesh</option><option>Rajasthan</option>
+              <option>Maharashtra</option><option>Punjab</option>
+              <option>Haryana</option><option>Gujarat</option>
+              <option>West Bengal</option><option>Odisha</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 block mb-1">Land (acres)</label>
+            <input id="land" type="number" value="2.5" step="0.5" min="0"
+              class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2
+              focus:outline-none focus:ring-2 focus:ring-green-500"/>
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 block mb-1">Category</label>
+            <select id="category" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500">
+              <option>General</option><option>OBC</option>
+              <option>SC</option><option>ST</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 block mb-1">Annual Income (₹)</label>
+            <input id="income" type="number" value="80000"
+              class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2
+              focus:outline-none focus:ring-2 focus:ring-green-500"/>
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 block mb-1">Main Crop</label>
+            <select id="crop" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500">
+              <option value="wheat">Wheat</option>
+              <option value="rice">Rice</option>
+              <option value="cotton">Cotton</option>
+              <option value="sugarcane">Sugarcane</option>
+              <option value="maize">Maize</option>
+              <option value="pulses">Pulses</option>
+              <option value="mustard">Mustard</option>
+              <option value="groundnut">Groundnut</option>
+              <option value="soybean">Soybean</option>
+            </select>
+          </div>
+          <div class="flex flex-col gap-2 justify-end pb-1">
+            <label class="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+              <input id="aadhaar" type="checkbox" checked class="accent-green-600 w-4 h-4"/> Has Aadhaar
+            </label>
+            <label class="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+              <input id="bank" type="checkbox" checked class="accent-green-600 w-4 h-4"/> Has Bank Account
+            </label>
+          </div>
+        </div>
+
+        <button onclick="checkEligibility()"
+          class="mt-4 w-full bg-green-600 hover:bg-green-700 text-white
+          text-sm font-medium py-2.5 rounded-xl transition">
+          🔍 Find My Eligible Schemes
+        </button>
+        <button onclick="downloadChecklist()"
+          class="mt-2 w-full bg-white hover:bg-gray-50 text-green-700
+          border border-green-300 text-sm font-medium py-2.5 rounded-xl
+          transition flex items-center justify-center gap-2">
+          📥 Download Documents Checklist
+        </button>
+      </div>
+
+      <!-- Summary -->
+      <div id="summary" class="hidden bg-green-50 border border-green-200
+        rounded-2xl px-5 py-4 flex items-center justify-between">
+        <div>
+          <p class="text-sm font-semibold text-green-800" id="summary-text"></p>
+          <p class="text-xs text-green-600 mt-0.5">Based on your profile</p>
+        </div>
+        <div class="text-3xl font-bold text-green-700" id="summary-count"></div>
+      </div>
+
+      <!-- Scheme Cards -->
+      <div id="schemes-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+
+    </div>
+
+    <!-- RIGHT COLUMN — Chat -->
+    <div class="flex flex-col gap-4">
+      <div class="bg-white rounded-2xl border border-gray-200 flex flex-col shadow-sm sticky top-20">
+
+        <div class="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+          <div class="w-7 h-7 bg-green-100 rounded-lg flex items-center justify-center text-sm">🤖</div>
+          <div>
+            <p class="text-sm font-semibold text-gray-800">AI Assistant</p>
+            <p class="text-xs text-gray-400">RAG-powered • Groq</p>
+          </div>
+        </div>
+
+        <div class="chat-messages p-4 flex flex-col gap-3" id="chat-messages">
+          <div class="flex gap-2">
+            <div class="w-6 h-6 bg-green-100 rounded-full flex items-center
+              justify-center text-xs flex-shrink-0">🌾</div>
+            <div class="bg-green-50 text-green-900 text-xs rounded-2xl
+              rounded-tl-none px-3 py-2 max-w-xs">
+              Namaste! Main aapko sarkari yojanaon ke baare mein madad kar
+              sakta hoon. Koi bhi sawaal poochhen! 🙏
+            </div>
+          </div>
+        </div>
+
+        <div class="px-3 pb-3">
+          <div class="flex flex-wrap gap-1.5 mb-2">
+            <button onclick="quickAsk('PM-KISAN ke liye documents kya chahiye?')"
+              class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600
+              px-2.5 py-1 rounded-full transition">
+              PM-KISAN docs
+            </button>
+            <button onclick="quickAsk('PMFBY crop insurance kaise apply karein?')"
+              class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600
+              px-2.5 py-1 rounded-full transition">
+              PMFBY apply
+            </button>
+            <button onclick="quickAsk('Kisan Credit Card ke kya fayde hain?')"
+              class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600
+              px-2.5 py-1 rounded-full transition">
+              KCC benefits
+            </button>
+          </div>
+          <div class="flex gap-2">
+            <input id="chat-input" type="text"
+              placeholder="Hindi ya English mein poochhen..."
+              class="flex-1 text-xs border border-gray-200 rounded-xl px-3 py-2
+              focus:outline-none focus:ring-2 focus:ring-green-500"
+              onkeydown="if(event.key==='Enter') sendMessage()"/>
+            <button onclick="sendMessage()"
+              class="bg-green-600 hover:bg-green-700 text-white px-3 py-2
+              rounded-xl text-sm transition">➤</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    const API = 'http://localhost:8000';
+
+    // ── Scheme steps ──────────────────────────────────
+    const SCHEME_STEPS = {
+      default: [
+        { label: "Documents collect karein", tip: "Sabhi zaroori documents taiyar karein" },
+        { label: "CSC centre jaayein",        tip: "Nazdiki Common Service Centre par jaayein" },
+        { label: "Form bharein",              tip: "Application form fill karein" },
+        { label: "Verification",              tip: "Documents verify honge" },
+        { label: "Benefit milega",            tip: "Benefit aapke account mein aayega" },
+      ],
+      pm_kisan: [
+        { label: "Documents taiyar karein",  tip: "Aadhaar, Khatauni, Bank Passbook" },
+        { label: "pmkisan.gov.in register",  tip: "Official portal par naya registration karein" },
+        { label: "eKYC complete karein",      tip: "Aadhaar OTP se eKYC verify karein" },
+        { label: "State verification",        tip: "Rajya sarkar aapka record verify karegi" },
+        { label: "₹2,000 installment",       tip: "Paisa seedha bank account mein aayega" },
+      ],
+      pmfby_kharif: [
+        { label: "Documents taiyar karein",  tip: "Aadhaar, Khasra, Sowing certificate" },
+        { label: "Bank jaayein",             tip: "Apne bank branch mein application dein" },
+        { label: "Premium bharein",           tip: "Sirf 2% premium Kharif fasal ke liye" },
+        { label: "Policy milegi",             tip: "Insurance policy document milegi" },
+        { label: "Claim karein",              tip: "Fasal nuksan par claim file karein" },
+      ],
+      pmfby_rabi: [
+        { label: "Documents taiyar karein",  tip: "Aadhaar, Khasra, Sowing certificate" },
+        { label: "Bank jaayein",             tip: "Apne bank branch mein application dein" },
+        { label: "Premium bharein",           tip: "Sirf 1.5% premium Rabi fasal ke liye" },
+        { label: "Policy milegi",             tip: "Insurance policy document milegi" },
+        { label: "Claim karein",              tip: "Fasal nuksan par claim file karein" },
+      ],
+      kcc: [
+        { label: "Bank jaayein",             tip: "Nazdiki nationalized bank mein jaayein" },
+        { label: "Form bharein",              tip: "KCC application form fill karein" },
+        { label: "Documents submit karein",   tip: "Aadhaar, land record, photo submit karein" },
+        { label: "Bank verification",         tip: "Bank aapka application process karega" },
+        { label: "Card milega",               tip: "Kisan Credit Card 7-14 din mein milega" },
+      ],
+      smam: [
+        { label: "agrimachinery.nic.in",     tip: "Official portal par register karein" },
+        { label: "Machine select karein",     tip: "Kaunsi machinery chahiye select karein" },
+        { label: "Documents upload karein",   tip: "Aadhaar, land record, bank passbook" },
+        { label: "Approval ka wait karein",   tip: "Department approval dega" },
+        { label: "Subsidy milegi",            tip: "50% subsidy seedha account mein" },
+      ],
+    };
+
+    const progressState = {};
+
+    function getSteps(id) {
+      return SCHEME_STEPS[id] || SCHEME_STEPS.default;
+    }
+
+    function getProgress(id) {
+      return progressState[id] ?? 0;
+    }
+
+    function setProgress(id, step) {
+      progressState[id] = step;
+      renderStepperById(id);
+    }
+
+    function renderStepperById(id) {
+      const el = document.getElementById(`stepper-${id}`);
+      if (!el) return;
+      el.innerHTML = buildStepper(id, getSteps(id), getProgress(id));
+    }
+
+    function handleStepClick(id, i) {
+      setProgress(id, i);
+    }
+
+    function buildStepper(id, steps, current) {
+      const pct = Math.round((current / steps.length) * 100);
+      let html = `
+        <div class="mt-3 pt-3 border-t border-gray-100">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-xs font-medium text-gray-600">Application Progress</p>
+            <span class="text-xs font-semibold ${pct === 100 ? 'text-green-600' : 'text-gray-500'}">
+              ${pct === 100 ? '✅ Complete!' : `${current}/${steps.length} steps`}
+            </span>
+          </div>
+          <div class="flex items-center mb-3">`;
+
+      steps.forEach((step, i) => {
+        const state = i < current ? 'done' : i === current ? 'active' : 'pending';
+        const label = i < current ? '✓' : i + 1;
+        html += `
+          <div class="step-wrap">
+            <div class="stepper-tooltip">${step.tip}</div>
+            <div class="step-circle ${state}"
+              onclick="handleStepClick('${id}', ${i})"
+              title="${step.label}">${label}</div>
+          </div>`;
+        if (i < steps.length - 1) {
+          html += `<div class="step-line ${i < current ? 'done' : ''}"></div>`;
+        }
+      });
+
+      html += `</div>
+        <div class="grid gap-0" style="grid-template-columns:repeat(${steps.length},1fr)">`;
+      steps.forEach((step, i) => {
+        const active = i === current;
+        html += `<div class="text-center" style="font-size:9px;color:${i < current ? '#16a34a' : active ? '#15803d' : '#9ca3af'};line-height:1.2;padding:0 1px">${step.label}</div>`;
+      });
+      html += `</div>
+        <div class="flex gap-2 mt-3">`;
+
+      if (current > 0) {
+        html += `<button onclick="setProgress('${id}', ${current - 1})"
+          class="flex-1 text-xs border border-gray-200 text-gray-500
+          hover:bg-gray-50 py-1.5 rounded-lg transition">← Previous</button>`;
+      }
+      if (current < steps.length) {
+        html += `<button onclick="setProgress('${id}', ${current + 1})"
+          class="flex-1 text-xs bg-green-600 hover:bg-green-700 text-white
+          py-1.5 rounded-lg transition font-medium">
+          ${current === 0 ? 'Start Application →' : current === steps.length - 1 ? '✓ Mark Complete' : 'Next Step →'}
+        </button>`;
+      } else {
+        html += `<button onclick="setProgress('${id}', 0)"
+          class="flex-1 text-xs border border-green-300 text-green-600
+          hover:bg-green-50 py-1.5 rounded-lg transition">🔄 Reset</button>`;
+      }
+      html += `</div></div>`;
+      return html;
+    }
+
+    // ── Health check ──────────────────────────────────
+    async function checkHealth() {
+      try {
+        const res  = await fetch(`${API}/health`);
+        const data = await res.json();
+        const dot  = document.getElementById('status-dot');
+        const txt  = document.getElementById('status-text');
+        if (data.rag_ready) {
+          dot.className = 'w-2 h-2 bg-green-500 rounded-full';
+          txt.textContent = 'AI Ready';
+        } else {
+          dot.className = 'w-2 h-2 bg-yellow-400 rounded-full';
+          txt.textContent = 'Loading...';
+        }
+      } catch {
+        document.getElementById('status-dot').className = 'w-2 h-2 bg-red-400 rounded-full';
+        document.getElementById('status-text').textContent = 'Offline';
+      }
+    }
+
+    // ── Profile helper ────────────────────────────────
+    function getProfile() {
+      return {
+        state:            document.getElementById('state').value,
+        land_acres:       parseFloat(document.getElementById('land').value),
+        category:         document.getElementById('category').value,
+        annual_income:    parseFloat(document.getElementById('income').value),
+        crop_type:        document.getElementById('crop').value,
+        has_aadhaar:      document.getElementById('aadhaar').checked,
+        has_bank_account: document.getElementById('bank').checked,
+      };
+    }
+
+    // ── Eligibility ───────────────────────────────────
+    async function checkEligibility() {
+      const btn = document.querySelector('button[onclick="checkEligibility()"]');
+      btn.textContent = '⏳ Checking...';
+      btn.disabled = true;
+      try {
+        const res  = await fetch(`${API}/api/eligibility`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(getProfile())
+        });
+        const data = await res.json();
+        renderSchemes(data);
+        document.getElementById('summary').classList.remove('hidden');
+        document.getElementById('summary-count').textContent = data.eligible_count;
+        document.getElementById('summary-text').textContent =
+          `Aap ${data.eligible_count} out of ${data.total_schemes} schemes ke liye eligible hain`;
+      } catch {
+        alert('Server se connect nahi ho paya.');
+      }
+      btn.textContent = '🔍 Find My Eligible Schemes';
+      btn.disabled = false;
+    }
+
+    // ── Download checklist ────────────────────────────
+    async function downloadChecklist() {
+      const btn = document.querySelector('button[onclick="downloadChecklist()"]');
+      btn.textContent = '⏳ Generating...';
+      btn.disabled = true;
+      try {
+        const res  = await fetch(`${API}/api/download-checklist`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(getProfile())
+        });
+        const blob = await res.blob();
+        const url  = window.URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url; a.download = 'kisan_seva_checklist.txt'; a.click();
+        window.URL.revokeObjectURL(url);
+      } catch { alert('Download failed.'); }
+      btn.textContent = '📥 Download Documents Checklist';
+      btn.disabled = false;
+    }
+
+    // ── Render scheme cards ───────────────────────────
+    function renderSchemes(data) {
+      const container = document.getElementById('schemes-container');
+      container.innerHTML = '';
+      data.schemes.forEach(scheme => {
+        const eligible = scheme.eligible;
+        const card = document.createElement('div');
+        card.className = `scheme-card bg-white rounded-2xl border p-4
+          ${eligible ? 'border-green-300 border-l-4' : 'border-gray-200 opacity-75'}`;
+
+        const stepperHTML = eligible
+          ? `<div id="stepper-${scheme.id}">${buildStepper(scheme.id, getSteps(scheme.id), getProgress(scheme.id))}</div>`
+          : '';
+
+        card.innerHTML = `
+          <div class="flex items-start justify-between mb-2">
+            <div>
+              <h3 class="text-sm font-semibold text-gray-800">${scheme.name}</h3>
+              <p class="text-xs text-gray-400">${scheme.ministry}</p>
+            </div>
+            <span class="text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ml-2
+              ${eligible ? 'bg-green-100 text-green-700' : 'bg-red-50 text-red-500'}">
+              ${eligible ? '✓ Eligible' : '✗ Not eligible'}
+            </span>
+          </div>
+          <p class="text-xs text-gray-600 mb-3">${scheme.benefit}</p>
+          ${eligible ? `
+            <div class="bg-gray-50 rounded-xl p-2.5 mb-2">
+              <p class="text-xs font-medium text-gray-600 mb-1">Documents needed:</p>
+              <ul class="text-xs text-gray-500 space-y-0.5">
+                ${scheme.documents.map(d => `<li>• ${d}</li>`).join('')}
+              </ul>
+            </div>
+            <p class="text-xs text-green-600 font-medium mb-2">
+              📍 Apply at: ${scheme.apply_at}
+            </p>
+            <button onclick="askAboutScheme('${scheme.name}')"
+              class="w-full text-xs bg-green-50 hover:bg-green-100
+              text-green-700 py-1.5 rounded-lg transition font-medium">
+              Ask AI about this scheme →
+            </button>
+            ${stepperHTML}
+          ` : `
+            <div class="bg-red-50 rounded-lg px-3 py-2 mt-1">
+              <p class="text-xs text-red-400">
+                ⚠️ ${scheme.not_eligible_reason || 'Profile does not meet criteria'}
+              </p>
+            </div>
+          `}`;
+        container.appendChild(card);
+      });
+    }
+
+    // ── Chat helpers ──────────────────────────────────
+    function addMessage(text, isUser) {
+      const container = document.getElementById('chat-messages');
+      const div = document.createElement('div');
+      div.className = `flex gap-2 ${isUser ? 'flex-row-reverse' : ''}`;
+      div.innerHTML = `
+        <div class="w-6 h-6 ${isUser ? 'bg-blue-100' : 'bg-green-100'}
+          rounded-full flex items-center justify-center text-xs flex-shrink-0">
+          ${isUser ? '👤' : '🌾'}
+        </div>
+        <div class="${isUser
+          ? 'bg-blue-600 text-white rounded-2xl rounded-tr-none'
+          : 'bg-green-50 text-green-900 rounded-2xl rounded-tl-none'}
+          text-xs px-3 py-2 max-w-xs whitespace-pre-wrap leading-relaxed">
+          ${text}
+        </div>`;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function addTyping() {
+      const container = document.getElementById('chat-messages');
+      const div = document.createElement('div');
+      div.className = 'flex gap-2';
+      div.id = 'typing-indicator';
+      div.innerHTML = `
+        <div class="w-6 h-6 bg-green-100 rounded-full flex items-center
+          justify-center text-xs">🌾</div>
+        <div class="bg-green-50 rounded-2xl rounded-tl-none px-3 py-2">
+          <div class="typing"><span></span><span></span><span></span></div>
+          <p id="typing-timer" class="text-xs text-green-500 mt-1">AI soch raha hai...</p>
+        </div>`;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+      let secs = 0;
+      window._typingTimer = setInterval(() => {
+        secs++;
+        const el = document.getElementById('typing-timer');
+        if (el) el.textContent = `AI soch raha hai... ${secs}s`;
+      }, 1000);
+    }
+
+    // ── Send message ──────────────────────────────────
+    async function sendMessage() {
+      const input    = document.getElementById('chat-input');
+      const question = input.value.trim();
+      if (!question) return;
+      addMessage(question, true);
+      input.value = '';
+      addTyping();
+      try {
+        const res  = await fetch(`${API}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question })
+        });
+        const data = await res.json();
+        document.getElementById('typing-indicator')?.remove();
+        clearInterval(window._typingTimer);
+        if (data.answer) {
+          addMessage(data.answer, false);
+          if (data.sources?.length) {
+            addMessage(`📄 Source: ${data.sources[0].scheme}`, false);
+          }
+        } else {
+          addMessage(data.detail || 'Kuch gadbad hui. Dobara try karein.', false);
+        }
+      } catch {
+        document.getElementById('typing-indicator')?.remove();
+        clearInterval(window._typingTimer);
+        addMessage('Server se connect nahi ho paya.', false);
+      }
+    }
+
+    function quickAsk(q) {
+      document.getElementById('chat-input').value = q;
+      sendMessage();
+    }
+
+    function askAboutScheme(name) {
+      quickAsk(`${name} scheme ke baare mein batao - eligibility, benefit aur kaise apply karein?`);
+    }
+
+    // ── Init ──────────────────────────────────────────
+    checkHealth();
+    checkEligibility();
+  </script>
+</body>
+</html>
